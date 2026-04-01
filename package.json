@@ -1,0 +1,15 @@
+{
+  "name": "pulseapi",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix client",
+    "dev:stack": "concurrently -n client,server -c blue,green \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build --prefix client",
+    "start": "npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
