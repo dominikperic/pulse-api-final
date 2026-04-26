@@ -1,53 +1,102 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { generateRiskNotes } from '../lib/hardening.js';
 
 const filters = [
   { id: 'all', label: 'All' },
-  { id: 'drift', label: 'Schema Drift' },
-  { id: 'validation', label: 'Validation Failures' },
-  { id: 'down', label: 'Monitor Down' },
+  { id: 'type', label: 'Type Conflict' },
+  { id: 'missing', label: 'Missing in Some Samples' },
+  { id: 'nullable', label: 'Nullable Uncertainty' },
+  { id: 'enum', label: 'Enum Candidate' },
+  { id: 'review', label: 'Needs Review' },
   { id: 'resolved', label: 'Resolved' },
 ];
 
-function rowClass(a) {
-  if (a.resolved) return 'alert-row';
-  if (a.failureType === 'Schema Drift') return 'alert-row drift';
-  if (a.failureType === 'Validation Failure') return 'alert-row validation';
-  if (a.failureType === 'Monitor Down') return 'alert-row down';
+function normalizeType(a) {
+  const raw = (a.failureType || '').toLowerCase();
+  const summary = (a.summary || '').toLowerCase();
+  if (raw.includes('type') || summary.includes('type mismatch')) return 'type';
+  if (raw.includes('missing') || summary.includes('missing')) return 'missing';
+  if (summary.includes('null') || summary.includes('nullable')) return 'nullable';
+  if (summary.includes('enum')) return 'enum';
+  if (raw.includes('review')) return 'review';
+  return 'review';
+}
+
+function reviewLabel(kind) {
+  if (kind === 'type') return 'Type Conflict';
+  if (kind === 'missing') return 'Missing in Some Samples';
+  if (kind === 'nullable') return 'Nullable Uncertainty';
+  if (kind === 'enum') return 'Enum Candidate';
+  return 'Needs Review';
+}
+
+function rowClass(kind, resolved) {
+  if (resolved) return 'alert-row';
+  if (kind === 'type') return 'alert-row down';
+  if (kind === 'missing' || kind === 'nullable') return 'alert-row validation';
+  if (kind === 'enum') return 'alert-row drift';
   return 'alert-row';
 }
 
 export default function AlertsPage() {
-  const { alerts, resolveAlert } = useApp();
+  const { alerts, resolveAlert, contracts } = useApp();
   const [filter, setFilter] = useState('all');
 
+  const enriched = useMemo(() => {
+    const base = alerts.map((a) => ({
+      ...a,
+      reviewType: normalizeType(a),
+    }));
+    const contractDerived = contracts.flatMap((c) =>
+      generateRiskNotes(c).slice(0, 3).map((note, idx) => ({
+        id: `risk-${c.id}-${idx}`,
+        contractId: c.id,
+        contractName: c.name,
+        path: 'inferred',
+        summary: note,
+        time: c.lastUpdated,
+        resolved: false,
+        reviewType: normalizeType({ failureType: 'Needs Review', summary: note }),
+      }))
+    );
+    return [...base, ...contractDerived];
+  }, [alerts, contracts]);
+
   const counts = useMemo(() => {
-    const c = { all: alerts.length, drift: 0, validation: 0, down: 0, resolved: 0 };
-    alerts.forEach((a) => {
-      if (a.failureType === 'Schema Drift') c.drift += 1;
-      if (a.failureType === 'Validation Failure') c.validation += 1;
-      if (a.failureType === 'Monitor Down') c.down += 1;
+    const c = {
+      all: alerts.length,
+      type: 0,
+      missing: 0,
+      nullable: 0,
+      enum: 0,
+      review: 0,
+      resolved: 0,
+    };
+    enriched.forEach((a) => {
+      c[a.reviewType] += 1;
       if (a.resolved) c.resolved += 1;
     });
+    c.review = enriched.filter((a) => a.reviewType === 'review').length;
     return c;
-  }, [alerts]);
+  }, [alerts.length, enriched]);
 
-  const visible = alerts.filter((a) => {
+  const visible = enriched.filter((a) => {
     if (filter === 'all') return true;
     if (filter === 'resolved') return a.resolved;
-    if (filter === 'drift') return !a.resolved && a.failureType === 'Schema Drift';
-    if (filter === 'validation') return !a.resolved && a.failureType === 'Validation Failure';
-    if (filter === 'down') return !a.resolved && a.failureType === 'Monitor Down';
-    return true;
+    return !a.resolved && a.reviewType === filter;
   });
 
   return (
     <>
       <div className="page-header">
-        <h1>Alerts</h1>
+        <h1>Review Queue</h1>
+        <p className="helper" style={{ margin: 0, flex: '1 1 100%' }}>
+          Contracts with inference ambiguity or schema notes that should be reviewed before publishing.
+        </p>
       </div>
-      <div className="filter-bar" role="tablist" aria-label="Alert filters">
+      <div className="filter-bar" role="tablist" aria-label="Review queue filters">
         {filters.map((f) => (
           <button
             key={f.id}
@@ -57,38 +106,37 @@ export default function AlertsPage() {
           >
             {f.label}
             <span className="badge badge-muted" style={{ marginLeft: 6 }}>
-              {counts[f.id] ?? counts.all}
+              {f.id === 'all' ? counts.all : counts[f.id] ?? 0}
             </span>
           </button>
         ))}
       </div>
 
-      <p className="section-title">Alert feed</p>
+      <p className="section-title">Inference warning feed</p>
       {visible.length === 0 ? (
-        <p className="helper">No alerts for this filter.</p>
+        <p className="helper">{enriched.length === 0 ? 'Nothing to review yet.' : 'No queue items for this filter.'}</p>
       ) : (
         visible.map((a) => (
-          <article key={a.id} className={rowClass(a)}>
+          <article key={a.id} className={rowClass(a.reviewType, a.resolved)}>
             <div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                <strong>{a.monitorName}</strong>
-                <span className="badge badge-warn">{a.failureType}</span>
-                <span className={`badge ${a.severity === 'Critical' ? 'badge-bad' : ''}`}>{a.severity}</span>
+                <strong>{a.contractName}</strong>
+                <span className="badge badge-warn">{reviewLabel(a.reviewType)}</span>
                 {a.resolved && <span className="badge badge-ok">Resolved</span>}
               </div>
-              <div className="helper mono">Affected path: {a.path}</div>
+              <div className="helper mono">Field path: {a.path}</div>
               <p style={{ margin: '8px 0 0' }}>{a.summary}</p>
               <div className="helper" style={{ marginTop: 6 }}>
-                Time detected: {a.time}
+                Last updated: {a.time}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-              <Link className="btn btn-sm btn-primary" to={`/monitors/${a.monitorId}`}>
-                View Monitor
+              <Link className="btn btn-sm btn-primary" to={`/contracts/${a.contractId}`}>
+                Open Contract
               </Link>
               {!a.resolved && (
                 <button type="button" className="btn btn-sm" onClick={() => void resolveAlert(a.id)}>
-                  Mark Resolved
+                  Mark Reviewed
                 </button>
               )}
             </div>
@@ -97,30 +145,30 @@ export default function AlertsPage() {
       )}
 
       <div className="table-wrap" style={{ marginTop: 24 }}>
-        <table className="data-table" aria-label="Alerts table view">
+        <table className="data-table" aria-label="Review queue table">
           <thead>
             <tr>
-              <th scope="col">Monitor Name</th>
-              <th scope="col">Failure Type</th>
-              <th scope="col">Affected Field/Path</th>
-              <th scope="col">Short Summary</th>
-              <th scope="col">Time Detected</th>
-              <th scope="col">Severity</th>
+              <th scope="col">Endpoint / Contract</th>
+              <th scope="col">Review Type</th>
+              <th scope="col">JSON Path</th>
+              <th scope="col">Summary</th>
+              <th scope="col">Time</th>
+              <th scope="col">Status</th>
               <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((a) => (
               <tr key={`t-${a.id}`}>
-                <td>{a.monitorName}</td>
-                <td>{a.failureType}</td>
+                <td>{a.contractName}</td>
+                <td>{reviewLabel(a.reviewType)}</td>
                 <td className="mono">{a.path}</td>
                 <td>{a.summary}</td>
                 <td>{a.time}</td>
-                <td>{a.severity}</td>
+                <td>{a.resolved ? 'Reviewed' : 'Open'}</td>
                 <td>
-                  <Link className="btn btn-sm" to={`/monitors/${a.monitorId}`}>
-                    View Monitor
+                  <Link className="btn btn-sm" to={`/contracts/${a.contractId}`}>
+                    Open Contract
                   </Link>
                 </td>
               </tr>

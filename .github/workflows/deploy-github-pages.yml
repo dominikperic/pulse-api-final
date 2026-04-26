@@ -39,6 +39,9 @@ jobs:
         run: npm run build
       - name: Configure Pages
         uses: actions/configure-pages@v4
+        with:
+          # Creates/enables Pages for the repo when not set up yet (needs pages:write).
+          enablement: true
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

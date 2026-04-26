@@ -7,18 +7,18 @@ export default function DashboardLayout() {
   return (
     <div className="dashboard-shell">
       <aside className="sidebar" aria-label="Main navigation">
+        <NavLink to="/dashboard" className="sidebar-brand" aria-label="PulseAPI home">
+          <img src="/pulseapi-logo.png" alt="PulseAPI" className="sidebar-brand-logo" />
+        </NavLink>
         <div className="sidebar-label">Navigate</div>
         <NavLink to="/dashboard" end className={({ isActive }) => (isActive ? 'active' : '')}>
           Dashboard
         </NavLink>
-        <NavLink to="/monitors" className={({ isActive }) => (isActive ? 'active' : '')}>
-          Monitors
+        <NavLink to="/contracts" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Contracts
         </NavLink>
         <NavLink to="/alerts" className={({ isActive }) => (isActive ? 'active' : '')}>
-          Alerts
-        </NavLink>
-        <NavLink to="/validation-rules" className={({ isActive }) => (isActive ? 'active' : '')}>
-          Validation Rules
+          Review Queue
         </NavLink>
         <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
           Settings
@@ -26,23 +26,12 @@ export default function DashboardLayout() {
       </aside>
       <div className="main-col">
         <header className="topnav">
-          <NavLink className="topnav-brand" to="/monitors">
-            PulseAPI
-          </NavLink>
-          <nav className="topnav-links" aria-label="Top navigation">
-            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Dashboard
+          <div className="topnav-brand-wrap">
+            <NavLink className="topnav-brand" to="/contracts">
+              PulseAPI
             </NavLink>
-            <NavLink to="/alerts" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Alerts
-            </NavLink>
-            <NavLink to="/monitors" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Monitors
-            </NavLink>
-            <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Settings
-            </NavLink>
-          </nav>
+            <span className="topnav-subtitle">Contract intelligence for existing API traffic</span>
+          </div>
           <div className="topnav-user">
             <span className="badge badge-muted" title="User menu (prototype)">
               Alex Engineer ▾

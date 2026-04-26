@@ -15,9 +15,10 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1>PulseAPI</h1>
+        <img src="/pulseapi-logo.png" alt="PulseAPI" className="auth-logo" />
+        <h1>Welcome back</h1>
         <p className="subtitle">
-          Monitor third-party APIs for schema drift and silent failures
+          Turn API logs into OpenAPI specs, typed clients, and Swagger-ready workflows.
         </p>
         <form onSubmit={handleSignIn} aria-label="Sign in form">
           <div className="field">
@@ -47,7 +48,7 @@ export default function LoginPage() {
           </div>
         </form>
         <p className="helper" style={{ marginTop: 16 }}>
-          Secure API monitoring: credentials are encrypted at rest in production (prototype UI only).
+          Recover API contracts from observed request/response traffic with confidence.
         </p>
       </div>
     </div>

@@ -1,12 +1,12 @@
 export default function StatusBadge({ status }) {
   const s = status || '';
   let cls = 'badge';
-  if (s === 'Healthy') cls += ' badge-ok';
-  else if (s === 'Paused') cls += ' badge-muted';
-  else if (s === 'Drift Detected') cls += ' badge-warn';
-  else if (s === 'Validation Failed') cls += ' badge-bad';
+  if (s === 'Types Ready' || s === 'Spec Generated' || s === 'Contract Generated') cls += ' badge-ok';
+  else if (s === 'Needs Review' || s === 'Archived') cls += ' badge-muted';
+  else if (s === 'Inference Warning' || s === 'Inconsistent Samples') cls += ' badge-warn';
+  else if (s === 'Draft') cls += ' badge-muted';
   return (
-    <span className={cls} title="Monitor status">
+    <span className={cls} title="Contract status">
       {status}
     </span>
   );
