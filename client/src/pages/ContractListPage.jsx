@@ -1,25 +1,44 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
+import { formatTimestampForTimezone, getUserTimezone } from '../lib/timezone.js';
+import { SETTINGS_UPDATED_EVENT } from '../lib/userSettings.js';
+import {
+  REVIEW_QUEUE_UPDATED_EVENT,
+  countContractsWithActiveRiskNotes,
+  loadReviewQueueState,
+} from '../lib/reviewQueueState.js';
 
 export default function ContractListPage() {
   const { contracts, updateContractStatus } = useApp();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [timezone, setTimezone] = useState(() => getUserTimezone());
+  const [queueState, setQueueState] = useState(() => loadReviewQueueState());
+
+  useEffect(() => {
+    function syncTimezone() {
+      setTimezone(getUserTimezone());
+    }
+    function syncQueue() {
+      setQueueState(loadReviewQueueState());
+    }
+    window.addEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+    window.addEventListener(REVIEW_QUEUE_UPDATED_EVENT, syncQueue);
+    return () => {
+      window.removeEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+      window.removeEventListener(REVIEW_QUEUE_UPDATED_EVENT, syncQueue);
+    };
+  }, []);
 
   const imported = contracts.length;
   const generated = contracts.filter((c) => c.specGenerated).length;
-  const warnings = contracts.reduce((sum, c) => {
-    const lines = [c.analysisMeta?.warnings, c.analysisMeta?.conflicts]
-      .filter(Boolean)
-      .join('\n')
-      .split('\n')
-      .filter(Boolean);
-    return sum + lines.length;
-  }, 0);
   const typesReady = contracts.filter((c) => c.specGenerated).length;
-  const reviewNeeded = contracts.filter((c) => c.status === 'Needs Review' || c.status === 'Inference Warning').length;
+  const contractsWithRiskNotes = useMemo(
+    () => countContractsWithActiveRiskNotes(contracts, queueState),
+    [contracts, queueState]
+  );
   const filteredContracts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return contracts.filter((c) => {
@@ -88,7 +107,7 @@ export default function ContractListPage() {
         </div>
         <div className="card summary-card">
           <div className="label">Contracts With Risk Notes</div>
-          <div className="value">{warnings + reviewNeeded}</div>
+          <div className="value">{contractsWithRiskNotes}</div>
         </div>
       </div>
 
@@ -133,7 +152,7 @@ export default function ContractListPage() {
                       <StatusBadge status={c.status} />
                     </td>
                     <td>{c.specGenerated ? 'Ready' : 'Pending'}</td>
-                    <td>{c.lastUpdated}</td>
+                    <td>{formatTimestampForTimezone(c.lastUpdated, timezone)}</td>
                     <td>{[c.analysisMeta?.warnings, c.analysisMeta?.conflicts].filter(Boolean).join('\n').split('\n').filter(Boolean).length}</td>
                     <td>
                       <div className="row-actions">

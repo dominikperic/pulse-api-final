@@ -1,8 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
-import { generateRiskNotes } from '../lib/hardening.js';
+import { formatTimestampForTimezone, getUserTimezone } from '../lib/timezone.js';
+import { SETTINGS_UPDATED_EVENT } from '../lib/userSettings.js';
+import {
+  REVIEW_QUEUE_UPDATED_EVENT,
+  countContractsWithActiveRiskNotes,
+  loadReviewQueueState,
+} from '../lib/reviewQueueState.js';
 
 function parseTs(ts) {
   const d = Date.parse(String(ts || '').replace(' UTC', 'Z').replace(' ', 'T'));
@@ -30,6 +36,8 @@ function warningSummary(c) {
 
 export default function DashboardPage() {
   const { contracts } = useApp();
+  const [timezone, setTimezone] = useState(() => getUserTimezone());
+  const [queueState, setQueueState] = useState(() => loadReviewQueueState());
   const hasContracts = contracts.length > 0;
   const sortedContracts = useMemo(
     () => [...contracts].sort((a, b) => parseTs(b.lastUpdated) - parseTs(a.lastUpdated)),
@@ -40,9 +48,9 @@ export default function DashboardPage() {
     const endpointsImported = contracts.length;
     const specsGenerated = contracts.filter((c) => c.specGenerated).length;
     const typedModelsReady = contracts.filter((c) => c.specGenerated).length;
-    const contractsWithRiskNotes = contracts.filter((c) => generateRiskNotes(c).length > 0).length;
+    const contractsWithRiskNotes = countContractsWithActiveRiskNotes(contracts, queueState);
     return { endpointsImported, specsGenerated, typedModelsReady, contractsWithRiskNotes };
-  }, [contracts]);
+  }, [contracts, queueState]);
 
   const reviewQueue = useMemo(
     () =>
@@ -62,6 +70,21 @@ export default function DashboardPage() {
     () => sortedContracts.filter((c) => c.specGenerated && warningCount(c) === 0).slice(0, 5),
     [sortedContracts]
   );
+
+  useEffect(() => {
+    function syncTimezone() {
+      setTimezone(getUserTimezone());
+    }
+    function syncQueue() {
+      setQueueState(loadReviewQueueState());
+    }
+    window.addEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+    window.addEventListener(REVIEW_QUEUE_UPDATED_EVENT, syncQueue);
+    return () => {
+      window.removeEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+      window.removeEventListener(REVIEW_QUEUE_UPDATED_EVENT, syncQueue);
+    };
+  }, []);
 
   return (
     <>
@@ -129,7 +152,7 @@ export default function DashboardPage() {
                 <span className="helper mono">
                   {c.method} {c.path}
                 </span>
-                <span className="helper">{c.lastUpdated}</span>
+                <span className="helper">{formatTimestampForTimezone(c.lastUpdated, timezone)}</span>
               </div>
               <div className="dashboard-activity-actions">
                 <StatusBadge status={c.status} />
@@ -152,7 +175,7 @@ export default function DashboardPage() {
               <div key={c.id} className="dashboard-activity-row">
                 <div className="dashboard-activity-main">
                   <strong>{c.name}</strong>
-                  <span className="helper">Updated {c.lastUpdated}</span>
+                  <span className="helper">Updated {formatTimestampForTimezone(c.lastUpdated, timezone)}</span>
                 </div>
                 <div className="dashboard-activity-actions">
                   <Link className="btn btn-sm" to={`/contracts/${c.id}/types`}>
@@ -242,7 +265,7 @@ export default function DashboardPage() {
                     <td>{c.name}</td>
                     <td>Ready</td>
                     <td>{c.status}</td>
-                    <td>{c.lastUpdated}</td>
+                    <td>{formatTimestampForTimezone(c.lastUpdated, timezone)}</td>
                     <td>
                       <Link className="btn btn-sm" to={`/contracts/${c.id}/types`}>
                         View Types

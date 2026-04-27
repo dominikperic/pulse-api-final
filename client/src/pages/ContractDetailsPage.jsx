@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 import { useApp } from '../context/AppContext';
@@ -11,6 +11,8 @@ import { generateZodModels } from '../lib/zodgen.js';
 import { generateRiskNotes } from '../lib/hardening.js';
 import { downloadTextFile } from '../lib/download.js';
 import { buildGenerationContext, generateTypeScriptClient, generateJavaScriptClient, generatePythonClient } from '../lib/codegen/index.js';
+import { formatTimestampForTimezone, getUserTimezone } from '../lib/timezone.js';
+import { SETTINGS_UPDATED_EVENT } from '../lib/userSettings.js';
 
 function isMeaningfulNote(line) {
   const value = String(line || '').trim();
@@ -24,6 +26,7 @@ export default function ContractDetailsPage() {
   const [specFormat, setSpecFormat] = useState('yaml');
   const [selectedClientLanguage, setSelectedClientLanguage] = useState('typescript');
   const [selectedModelOutput, setSelectedModelOutput] = useState('tsModels');
+  const [timezone, setTimezone] = useState(() => getUserTimezone());
 
   const requestRows = useMemo(() => {
     if (c?.analysisMeta?.requestFieldSummary?.length) return c.analysisMeta.requestFieldSummary;
@@ -142,6 +145,14 @@ export default function ContractDetailsPage() {
     };
   }, [selectedModelOutput, zodModels?.content, typeModels?.content, c?.id]);
 
+  useEffect(() => {
+    function syncTimezone() {
+      setTimezone(getUserTimezone());
+    }
+    window.addEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+    return () => window.removeEventListener(SETTINGS_UPDATED_EVENT, syncTimezone);
+  }, []);
+
   if (!c) {
     return (
       <p>
@@ -187,7 +198,7 @@ export default function ContractDetailsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 12 }}>
           <div>
             <label>Last updated</label>
-            <div>{c.lastUpdated}</div>
+            <div>{formatTimestampForTimezone(c.lastUpdated, timezone)}</div>
           </div>
           <div>
             <label>OpenAPI status</label>

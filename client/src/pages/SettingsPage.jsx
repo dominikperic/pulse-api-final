@@ -1,13 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { DEFAULT_SETTINGS, loadUserSettings, saveUserSettings } from '../lib/userSettings.js';
 
 export default function SettingsPage() {
-  const [email, setEmail] = useState('alex@acme.dev');
-  const [notifyEmail, setNotifyEmail] = useState(true);
-  const [notifySlack, setNotifySlack] = useState(false);
-  const [tz, setTz] = useState('UTC');
-  const [exportFmt, setExportFmt] = useState('yaml');
-  const [typeOutput, setTypeOutput] = useState('both');
-  const [typeStrictness, setTypeStrictness] = useState('balanced');
+  const [email, setEmail] = useState(DEFAULT_SETTINGS.email);
+  const [organization, setOrganization] = useState(DEFAULT_SETTINGS.organization);
+  const [notifyEmail, setNotifyEmail] = useState(DEFAULT_SETTINGS.notifyEmail);
+  const [notifySlack, setNotifySlack] = useState(DEFAULT_SETTINGS.notifySlack);
+  const [tz, setTz] = useState(DEFAULT_SETTINGS.tz);
+  const [exportFmt, setExportFmt] = useState(DEFAULT_SETTINGS.exportFmt);
+  const [typeOutput, setTypeOutput] = useState(DEFAULT_SETTINGS.typeOutput);
+  const [typeStrictness, setTypeStrictness] = useState(DEFAULT_SETTINGS.typeStrictness);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    const initial = loadUserSettings();
+    setEmail(initial.email);
+    setOrganization(initial.organization);
+    setNotifyEmail(Boolean(initial.notifyEmail));
+    setNotifySlack(Boolean(initial.notifySlack));
+    setTz(initial.tz);
+    setExportFmt(initial.exportFmt);
+    setTypeOutput(initial.typeOutput);
+    setTypeStrictness(initial.typeStrictness);
+  }, []);
+
+  function handleSaveSettings() {
+    const next = {
+      email: String(email || '').trim(),
+      organization: String(organization || '').trim(),
+      notifyEmail,
+      notifySlack,
+      tz,
+      exportFmt,
+      typeOutput,
+      typeStrictness,
+    };
+    saveUserSettings(next);
+    setSaveMessage('Settings saved.');
+  }
 
   return (
     <>
@@ -23,7 +53,7 @@ export default function SettingsPage() {
           </div>
           <div className="field">
             <label htmlFor="org">Organization name</label>
-            <input id="org" type="text" defaultValue="Acme Engineering" />
+            <input id="org" type="text" value={organization} onChange={(e) => setOrganization(e.target.value)} />
           </div>
         </section>
 
@@ -41,14 +71,6 @@ export default function SettingsPage() {
               Slack webhook for schema review queue updates
             </label>
           </div>
-        </section>
-
-        <section className="card" style={{ marginBottom: 16 }}>
-          <h2 className="section-title">JSON sample handling</h2>
-          <p className="helper">
-            Prototype: samples stay in-browser or mock store. Production would redact secrets, size-limit payloads, and
-            optionally store only inferred schemas.
-          </p>
         </section>
 
         <section className="card" style={{ marginBottom: 16 }}>
@@ -88,13 +110,6 @@ export default function SettingsPage() {
         </section>
 
         <section className="card" style={{ marginBottom: 16 }}>
-          <h2 className="section-title">Swagger handoff</h2>
-          <p className="helper">
-            PulseAPI can open generated specs in Swagger Editor and provide copy/download handoff for Swagger tooling.
-          </p>
-        </section>
-
-        <section className="card" style={{ marginBottom: 16 }}>
           <h2 className="section-title">Timezone</h2>
           <div className="field">
             <label htmlFor="tz">Timezone</label>
@@ -107,9 +122,14 @@ export default function SettingsPage() {
           <p className="helper">Timestamps for imports and spec generation use this timezone.</p>
         </section>
 
-        <button type="button" className="btn btn-primary">
+        <button type="button" className="btn btn-primary" onClick={handleSaveSettings}>
           Save Settings
         </button>
+        {saveMessage && (
+          <p className="helper" role="status" style={{ marginTop: 8 }}>
+            {saveMessage}
+          </p>
+        )}
       </div>
     </>
   );

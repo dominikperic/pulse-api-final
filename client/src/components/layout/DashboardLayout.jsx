@@ -1,8 +1,19 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { SETTINGS_UPDATED_EVENT, buildUserDisplayName, loadUserSettings } from '../../lib/userSettings.js';
 
 export default function DashboardLayout() {
   const { signOut, loadError, refreshWorkspace } = useApp();
+  const [userLabel, setUserLabel] = useState(() => buildUserDisplayName(loadUserSettings()));
+
+  useEffect(() => {
+    function syncUserLabel() {
+      setUserLabel(buildUserDisplayName(loadUserSettings()));
+    }
+    window.addEventListener(SETTINGS_UPDATED_EVENT, syncUserLabel);
+    return () => window.removeEventListener(SETTINGS_UPDATED_EVENT, syncUserLabel);
+  }, []);
 
   return (
     <div className="dashboard-shell">
@@ -34,7 +45,7 @@ export default function DashboardLayout() {
           </div>
           <div className="topnav-user">
             <span className="badge badge-muted" title="User menu (prototype)">
-              Alex Engineer ▾
+              {userLabel} ▾
             </span>{' '}
             <button type="button" className="link" onClick={signOut}>
               Sign out

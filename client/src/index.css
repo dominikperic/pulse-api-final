@@ -287,6 +287,11 @@ table.data-table tr:hover td {
   width: min(290px, 100%);
   height: auto;
   margin: 0 0 var(--space-4);
+  display: block;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  vertical-align: top;
 }
 
 .auth-card h1 {
@@ -331,17 +336,34 @@ table.data-table tr:hover td {
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: linear-gradient(180deg, #0d1d4f 0%, #10265f 100%);
-  border-right: 1px solid #1f356e;
+  background: linear-gradient(160deg, #e3f1f9 0%, #cfe7df 42%, #92c2b6 100%);
+  border-right: 1px solid rgba(6, 21, 41, 0.12);
   padding: var(--space-4) 0;
-  color: #c9d7f8;
+  color: #061529;
 }
 
 .sidebar-brand {
   display: block;
   padding: 0 var(--space-4) var(--space-4);
-  border-bottom: 1px solid rgba(201, 215, 248, 0.16);
+  border-bottom: 1px solid rgba(6, 21, 41, 0.1);
   margin-bottom: var(--space-3);
+}
+
+/* Brand link is still an <a>; reset nav-row styles that add a "boxed" / light background. */
+.sidebar a.sidebar-brand {
+  background: transparent;
+  border-left: 0;
+  color: inherit;
+  padding: 0 var(--space-4) var(--space-4);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar a.sidebar-brand:hover,
+.sidebar a.sidebar-brand:focus-visible,
+.sidebar a.sidebar-brand.active {
+  background: transparent;
+  color: inherit;
+  border-left: 0;
 }
 
 .sidebar-brand-logo {
@@ -349,9 +371,10 @@ table.data-table tr:hover td {
   max-width: 180px;
   height: auto;
   display: block;
-  border-radius: 6px;
-  background: #f5f7fc;
-  padding: 6px 8px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
 }
 
 .sidebar-label {
@@ -359,28 +382,30 @@ table.data-table tr:hover td {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #7f98d0;
+  color: #087d5b;
   padding: var(--space-3) var(--space-4) var(--space-1);
 }
 
 .sidebar a {
   display: block;
   padding: 10px var(--space-4);
-  color: #d4e0fd;
+  color: #061529;
   text-decoration: none;
   font-size: 13px;
   border-left: 3px solid transparent;
   font-weight: 500;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
 .sidebar a:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(146, 194, 182, 0.3);
+  border-left-color: rgba(8, 125, 91, 0.55);
 }
 
 .sidebar a.active {
-  background: rgba(16, 153, 127, 0.18);
-  border-left-color: #2fd4b4;
-  color: #ecfefb;
+  background: rgba(8, 125, 91, 0.32);
+  border-left-color: #087d5b;
+  color: #061529;
   font-weight: 700;
 }
 
@@ -822,7 +847,7 @@ table.data-table tr:hover td {
   .sidebar {
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid #1f356e;
+    border-bottom: 1px solid rgba(6, 21, 41, 0.12);
     padding: var(--space-3);
   }
 
