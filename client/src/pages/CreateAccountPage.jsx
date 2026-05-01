@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
-export default function LoginPage() {
+export default function CreateAccountPage() {
   const navigate = useNavigate();
-  const { authed, authReady, signIn } = useApp();
+  const { authed, authReady, signUp } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,15 +15,15 @@ export default function LoginPage() {
 
   const canSubmit = Boolean(email.trim()) && Boolean(password.trim()) && !busy;
 
-  async function handleSignIn(e) {
+  async function handleCreateAccount(e) {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
-      await signIn({ email, password });
+      await signUp({ email, password });
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed.');
+      setError(err instanceof Error ? err.message : 'Account creation failed.');
     } finally {
       setBusy(false);
     }
@@ -33,10 +33,10 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <img src="/pulseapi-logo.png" alt="PulseAPI" className="auth-logo" />
-        <h1>Welcome back</h1>
-        <p className="subtitle">Turn API logs into OpenAPI specs, typed clients, and Swagger-ready workflows.</p>
+        <h1>Create account</h1>
+        <p className="subtitle">Create an account to start validating API contracts.</p>
 
-        <form onSubmit={handleSignIn} aria-label="Sign in form">
+        <form onSubmit={handleCreateAccount} aria-label="Create account form">
           {error ? <p style={{ margin: '0 0 12px', color: '#9b1c1c', fontSize: 13 }}>{error}</p> : null}
 
           <div className="field">
@@ -58,8 +58,8 @@ export default function LoginPage() {
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={busy}
@@ -73,16 +73,13 @@ export default function LoginPage() {
               disabled={!canSubmit}
               title={!canSubmit ? 'Enter your email and password.' : ''}
             >
-              {busy ? 'Working...' : 'Sign In'}
+              {busy ? 'Working...' : 'Create Account'}
             </button>
           </div>
         </form>
 
-        <p className="helper" style={{ marginTop: 10 }}>
-          Recover API contracts from observed request/response traffic with confidence.
-        </p>
         <p className="helper" style={{ marginTop: 8 }}>
-          No account yet? <Link to="/create-account">Create account</Link>
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>

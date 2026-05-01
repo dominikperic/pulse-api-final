@@ -5,18 +5,27 @@ import { useApp } from '../context/AppContext';
 import { runImportAnalysis } from '../lib/pipeline.js';
 import CollapsibleSection from '../components/CollapsibleSection.jsx';
 
-const emptyReq = () => ({ id: `rq-${Date.now()}`, body: '{\n  "email": "jane@acme.com"\n}' });
+const emptyReq = () => ({ id: `rq-${Date.now()}`, body: '{\n  "email": "alex@example.test"\n}' });
 const emptyRes = () => ({
   id: `rs-${Date.now()}`,
   statusCode: '200',
-  body: '{\n  "id": "cus_abc",\n  "object": "customer"\n}',
+  body: '{\n  "id": "demo_123",\n  "status": "created"\n}',
 });
+
+function isDraftCandidate(form) {
+  return !String(form.name || '').trim() &&
+    !String(form.description || '').trim() &&
+    !String(form.path || '').trim() &&
+    !String(form.url || '').trim();
+}
 
 function buildPayloadFromAnalysis(form, analysis, sampleImportSnapshot) {
   const errCount = analysis.errors.length;
   const conflictCount = analysis.mergedConflicts.length;
+  const draftCandidate = isDraftCandidate(form);
   let status = 'Spec Generated';
-  if (errCount) status = 'Needs Review';
+  if (draftCandidate) status = 'Draft';
+  else if (errCount) status = 'Needs Review';
   else if (conflictCount > 0) status = 'Inference Warning';
 
   const normalizedAuthConfig =
@@ -37,8 +46,8 @@ function buildPayloadFromAnalysis(form, analysis, sampleImportSnapshot) {
     authConfig: normalizedAuthConfig,
     lastUpdated: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
     status,
-    alertCount: conflictCount + errCount,
-    specGenerated: errCount === 0,
+    alertCount: draftCandidate ? 0 : conflictCount + errCount,
+    specGenerated: draftCandidate ? false : errCount === 0,
     requestSchema: analysis.analysisMeta.requestSchema,
     responseSchemas: analysis.analysisMeta.responseSchemas,
     openApiDocument: analysis.openApiDocument,
@@ -57,7 +66,7 @@ export default function ImportSamplesPage() {
 
   const [name, setName] = useState(existing?.name ?? '');
   const [method, setMethod] = useState(existing?.method ?? 'POST');
-  const [path, setPath] = useState(existing?.path ?? '/v1/customers');
+  const [path, setPath] = useState(existing?.path ?? '');
   const [url, setUrl] = useState(existing?.endpoint ?? '');
   const [description, setDescription] = useState(existing?.description ?? '');
   const [authType, setAuthType] = useState(existing?.authConfig?.type ?? 'none');
@@ -133,7 +142,6 @@ export default function ImportSamplesPage() {
         body,
       })),
     };
-    const endpointResolved = url || `https://api.example.com${path || ''}`;
     const payload = buildPayloadFromAnalysis(
       {
         name,
@@ -209,7 +217,7 @@ export default function ImportSamplesPage() {
                 id="ep-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Stripe Customer Create"
+                placeholder="e.g. Demo Order Create"
               />
             </div>
             <div className="field">
@@ -228,7 +236,7 @@ export default function ImportSamplesPage() {
                 id="ep-path"
                 value={path}
                 onChange={(e) => setPath(e.target.value)}
-                placeholder="/v1/customers"
+                placeholder="/api/demo/orders"
                 className="mono"
               />
             </div>
@@ -238,7 +246,7 @@ export default function ImportSamplesPage() {
                 id="ep-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://api.stripe.com/v1/customers"
+                placeholder="https://api.example.test/api/demo/orders"
                 className="mono"
               />
             </div>

@@ -1,9 +1,17 @@
 /** Reserved for future opt-in persistence. The mock session store is in-memory only (reload resets to seeds). */
 const STORAGE_KEY = 'pulseapi_contracts_v2';
 
-export function loadPersistedState() {
+function scopedKey(scope) {
+  const token = String(scope || '')
+    .trim()
+    .toLowerCase();
+  if (!token || token === 'anonymous') return STORAGE_KEY;
+  return `${STORAGE_KEY}:${token}`;
+}
+
+export function loadPersistedState(scope) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(scopedKey(scope));
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -11,9 +19,9 @@ export function loadPersistedState() {
   }
 }
 
-export function savePersistedState(state) {
+export function savePersistedState(state, scope) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(scopedKey(scope), JSON.stringify(state));
   } catch (e) {
     console.warn('pulseapi: localStorage save failed', e);
   }

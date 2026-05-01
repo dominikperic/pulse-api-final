@@ -1,6 +1,8 @@
-# PulseAPI
+# PulseAPI Mockup
 
-## Must have
+Quick local setup for the **entire app** (frontend + backend API).
+
+## Prerequisites
 
 - Node.js 18+ (Node 20 recommended)
 - npm
@@ -15,8 +17,18 @@ npm install --prefix client
 npm install --prefix server
 ```
 
+## 2) Enable full-stack mode in the client
 
-## 2) Run frontend and backend together
+Create `client/.env.development` with:
+
+```env
+VITE_USE_MOCK_API=false
+VITE_API_URL=
+```
+
+Leaving `VITE_API_URL` empty makes the client call `/api/*`, which Vite proxies to the backend on `http://localhost:3001`.
+
+## 3) Run frontend + backend together
 
 From the repo root:
 
@@ -28,7 +40,12 @@ This starts:
 - Frontend (Vite): `http://localhost:5173`
 - Backend (Express): `http://localhost:3001`
 
-## 3) Verify Working
+## 4) Quick verification
 
 - Open the app at `http://localhost:5173`
 - Check backend health at `http://localhost:3001/api/health`
+- Auth in full-stack mode now uses real API endpoints:
+  - `POST /api/auth/sign-up`
+  - `POST /api/auth/sign-in`
+- Login is form-based in local dev (no bearer token storage/session handling in the app).
+- You must create an account before signing in.

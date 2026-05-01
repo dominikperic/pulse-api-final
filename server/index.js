@@ -8,6 +8,31 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'] }));
 app.use(express.json());
 
+/**
+ * Dev-only in-memory auth store.
+ * This is intentionally simple for local full-stack flows.
+ */
+const usersByEmail = new Map();
+
+function nowUtc() {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
+}
+
+function normalizeEmail(email) {
+  return String(email || '')
+    .trim()
+    .toLowerCase();
+}
+
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name || '',
+    createdAt: user.createdAt,
+  };
+}
+
 app.get('/', (_req, res) => {
   res.type('html').send(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>PulseAPI — API</title></head>
@@ -23,6 +48,50 @@ app.get('/', (_req, res) => {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'pulseapi-api', note: 'Prototype backend' });
+});
+
+app.post('/api/auth/sign-up', (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || '');
+  const name = String(req.body?.name || '').trim();
+
+  if (!email || !email.includes('@')) {
+    res.status(400).json({ ok: false, error: 'Enter a valid email address.' });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ ok: false, error: 'Password must be at least 8 characters.' });
+    return;
+  }
+  if (usersByEmail.has(email)) {
+    res.status(409).json({ ok: false, error: 'An account with this email already exists.' });
+    return;
+  }
+
+  const user = {
+    id: `u_${Date.now()}`,
+    email,
+    name: name || email.split('@')[0],
+    // Dev-only: plain-text password in memory.
+    password,
+    createdAt: nowUtc(),
+  };
+  usersByEmail.set(email, user);
+
+  res.status(201).json({ ok: true, user: sanitizeUser(user) });
+});
+
+app.post('/api/auth/sign-in', (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || '');
+  const user = usersByEmail.get(email);
+
+  if (!user || user.password !== password) {
+    res.status(401).json({ ok: false, error: 'Invalid email or password.' });
+    return;
+  }
+
+  res.json({ ok: true, user: sanitizeUser(user) });
 });
 
 /**

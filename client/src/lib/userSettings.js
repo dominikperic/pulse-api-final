@@ -1,9 +1,11 @@
+import { getActiveUserKey } from '../services/authState.js';
+
 export const SETTINGS_STORAGE_KEY = 'pulseapi_user_settings_v1';
 export const SETTINGS_UPDATED_EVENT = 'pulseapi:settings-updated';
 
 export const DEFAULT_SETTINGS = {
-  email: 'alex@acme.dev',
-  organization: 'Acme Engineering',
+  email: '',
+  organization: '',
   notifyEmail: true,
   notifySlack: false,
   tz: 'UTC',
@@ -12,9 +14,17 @@ export const DEFAULT_SETTINGS = {
   typeStrictness: 'balanced',
 };
 
+function scopedSettingsKey() {
+  const scope = String(getActiveUserKey() || '')
+    .trim()
+    .toLowerCase();
+  if (!scope || scope === 'anonymous') return SETTINGS_STORAGE_KEY;
+  return `${SETTINGS_STORAGE_KEY}:${scope}`;
+}
+
 export function loadUserSettings() {
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = localStorage.getItem(scopedSettingsKey());
     if (!raw) return { ...DEFAULT_SETTINGS };
     const parsed = JSON.parse(raw);
     return { ...DEFAULT_SETTINGS, ...(parsed || {}) };
@@ -24,7 +34,7 @@ export function loadUserSettings() {
 }
 
 export function saveUserSettings(nextSettings) {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(nextSettings));
+  localStorage.setItem(scopedSettingsKey(), JSON.stringify(nextSettings));
   window.dispatchEvent(new Event(SETTINGS_UPDATED_EVENT));
 }
 

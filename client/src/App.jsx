@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useApp } from './context/AppContext';
 import DashboardLayout from './components/layout/DashboardLayout';
 import LoginPage from './pages/LoginPage';
+import CreateAccountPage from './pages/CreateAccountPage';
 import DashboardPage from './pages/DashboardPage';
 import ContractListPage from './pages/ContractListPage';
 import ImportSamplesPage from './pages/ImportSamplesPage';
@@ -13,7 +14,8 @@ import ValidationRulesPage from './pages/ValidationRulesPage';
 import SettingsPage from './pages/SettingsPage';
 
 function Protected() {
-  const { authed } = useApp();
+  const { authed, authReady } = useApp();
+  if (!authReady) return null;
   if (!authed) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
@@ -31,6 +33,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/create-account" element={<CreateAccountPage />} />
       <Route path="/monitors/*" element={<LegacyMonitorsRedirect />} />
       <Route element={<Protected />}>
         <Route path="/" element={<DashboardLayout />}>

@@ -66,10 +66,6 @@ export default function DashboardPage() {
   );
 
   const latestContract = sortedContracts[0];
-  const recentlyHardened = useMemo(
-    () => sortedContracts.filter((c) => c.specGenerated && warningCount(c) === 0).slice(0, 5),
-    [sortedContracts]
-  );
 
   useEffect(() => {
     function syncTimezone() {
@@ -130,9 +126,6 @@ export default function DashboardPage() {
           <div className="row-actions">
             <Link className="btn btn-primary" to="/contracts/import">
               Import Logs
-            </Link>
-            <Link className="btn" to="/contracts/import">
-              Create Contract
             </Link>
           </div>
         </section>
@@ -219,65 +212,28 @@ export default function DashboardPage() {
             Quick Actions
           </h2>
           <div className="dashboard-quick-actions">
-            <Link className="btn" to="/contracts/import">
+            <Link className="btn btn-primary" to="/contracts/import">
               Import Logs
             </Link>
             <Link className="btn" to={latestContract ? `/contracts/${latestContract.id}` : '/contracts'}>
               Open Latest Spec
             </Link>
             <Link className="btn" to={latestContract ? `/contracts/${latestContract.id}/check` : '/contracts'}>
-              Open in SwaggerHub
+              Open Latest in SwaggerHub
             </Link>
             <Link className="btn" to={latestContract ? `/contracts/${latestContract.id}/types` : '/contracts'}>
-              Generate Types
+              Generate Latest Types
             </Link>
             <Link className="btn" to="/alerts">
               Review Risk Notes
             </Link>
-            <Link className="btn btn-primary" to="/contracts">
+            <Link className="btn" to="/contracts">
               View Contracts
             </Link>
           </div>
         </section>
       </div>
 
-      <section className="card dashboard-gap" style={{ padding: 16 }}>
-        <h2 className="section-title" style={{ marginTop: 0 }}>
-          Recently Hardened Contracts
-        </h2>
-        {recentlyHardened.length === 0 ? (
-          <p className="helper">No contracts are fully hardened yet.</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table" aria-label="Recently hardened contracts">
-              <thead>
-                <tr>
-                  <th scope="col">Endpoint</th>
-                  <th scope="col">Typed Models</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Updated</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentlyHardened.map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.name}</td>
-                    <td>Ready</td>
-                    <td>{c.status}</td>
-                    <td>{formatTimestampForTimezone(c.lastUpdated, timezone)}</td>
-                    <td>
-                      <Link className="btn btn-sm" to={`/contracts/${c.id}/types`}>
-                        View Types
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
         </>
       )}
     </>

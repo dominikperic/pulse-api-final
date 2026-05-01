@@ -10,11 +10,16 @@ function buildUrl(path) {
  * JSON request helper for live API mode.
  * Implement matching routes on Express (see server/index.js stubs).
  */
-export async function httpJson(method, path, body) {
+export async function httpJson(method, path, body, options = {}) {
   const url = buildUrl(path);
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
   const res = await fetch(url, {
     method,
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();

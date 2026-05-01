@@ -5,6 +5,7 @@ import { mergeRequestConfig } from '../../lib/requestConfigDefaults.js';
 import { inferFromSamples, buildFieldSummary } from '../../lib/schemaInference.js';
 import { rebuildOpenApiDocument } from '../../lib/contractRebuild.js';
 import { loadPersistedState, savePersistedState } from '../../lib/persistence.js';
+import { getActiveUserKey } from '../authState.js';
 
 function buildContractFromBundle(bundle, analysis) {
   const now = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
@@ -194,8 +195,8 @@ function seedDatabase() {
 }
 
 /** Demo mode: always start from bundled samples; nothing is written to localStorage. Reload = reset. */
-function loadOrSeed() {
-  const persisted = loadPersistedState();
+function loadOrSeed(userKey) {
+  const persisted = loadPersistedState(userKey);
   if (persisted && typeof persisted === 'object') {
     return {
       contracts: Array.isArray(persisted.contracts) ? persisted.contracts : [],
@@ -204,7 +205,7 @@ function loadOrSeed() {
       seededRules: Array.isArray(persisted.seededRules) ? persisted.seededRules : [],
     };
   }
-  if (import.meta.env.VITE_ENABLE_DEMO_SEED === 'true') {
+  if (import.meta.env.VITE_ENABLE_DEMO_SEED === 'true' && userKey === 'anonymous') {
     return seedDatabase();
   }
   return {
@@ -215,17 +216,27 @@ function loadOrSeed() {
   };
 }
 
-let state = loadOrSeed();
+let stateScope = getActiveUserKey();
+let state = loadOrSeed(stateScope);
+
+function ensureScope() {
+  const nextScope = getActiveUserKey();
+  if (nextScope === stateScope) return;
+  stateScope = nextScope;
+  state = loadOrSeed(stateScope);
+}
 
 function persist() {
-  savePersistedState(state);
+  savePersistedState(state, stateScope);
 }
 
 export async function listContracts() {
+  ensureScope();
   return structuredClone(state.contracts);
 }
 
 export async function createContract(payload) {
+  ensureScope();
   const id = `c${Date.now()}`;
   const row = {
     id,
@@ -255,6 +266,7 @@ export async function createContract(payload) {
 }
 
 export async function updateContract(id, payload) {
+  ensureScope();
   state.contracts = state.contracts.map((c) =>
     c.id === id
       ? {
@@ -269,6 +281,7 @@ export async function updateContract(id, payload) {
 }
 
 export async function deleteContract(id) {
+  ensureScope();
   const before = state.contracts.length;
   state.contracts = state.contracts.filter((c) => c.id !== id);
   if (state.contracts.length === before) return { ok: false, error: 'Contract not found' };
@@ -280,20 +293,24 @@ export async function deleteContract(id) {
 }
 
 export async function updateContractStatus(id, status) {
+  ensureScope();
   state.contracts = state.contracts.map((c) => (c.id === id ? { ...c, status } : c));
   persist();
 }
 
 export async function listAlerts() {
+  ensureScope();
   return structuredClone(state.alerts);
 }
 
 export async function resolveAlert(alertId) {
+  ensureScope();
   state.alerts = state.alerts.map((a) => (a.id === alertId ? { ...a, resolved: true } : a));
   persist();
 }
 
 export async function addValidationRule(contractId, rule) {
+  ensureScope();
   const id = `r${Date.now()}`;
   state.extraRules.push({
     id,
@@ -311,6 +328,7 @@ function allRules() {
 }
 
 export async function listValidationRules() {
+  ensureScope();
   return allRules().map((r) => ({
     ...r,
     contractName: state.contracts.find((c) => c.id === r.contractId)?.name || r.contractId,
@@ -340,6 +358,7 @@ function updateRuleLastResults(contractId, validationResults) {
 }
 
 export async function recordSampleCheck(contractId, { sampleJsonText, sampleKind, statusCode }) {
+  ensureScope();
   const c = state.contracts.find((x) => x.id === contractId);
   if (!c) return { ok: false, error: 'Contract not found' };
 
@@ -407,6 +426,7 @@ export async function recordSampleCheck(contractId, { sampleJsonText, sampleKind
  * @param {object} liveResult — server JSON body from runLiveEndpointCheck
  */
 export async function recordLiveCheck(contractId, liveResult) {
+  ensureScope();
   const c = state.contracts.find((x) => x.id === contractId);
   if (!c) return { ok: false, error: 'Contract not found' };
 
@@ -484,6 +504,7 @@ export async function recordLiveCheck(contractId, liveResult) {
  * Merge live response into contract response schema for a status code and rebuild OpenAPI.
  */
 export async function applyProposedResponseUpdate(contractId, { statusCode, proposedJson }) {
+  ensureScope();
   const c = state.contracts.find((x) => x.id === contractId);
   if (!c) return { ok: false, error: 'Contract not found' };
 

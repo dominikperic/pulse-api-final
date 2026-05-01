@@ -9,12 +9,15 @@ import {
 import * as contractsRepository from '../services/repositories/contractsRepository';
 import * as alertsRepository from '../services/repositories/alertsRepository';
 import * as validationRulesRepository from '../services/repositories/validationRulesRepository';
+import * as authRepository from '../services/repositories/authRepository';
 import { mergeRequestConfig } from '../lib/requestConfigDefaults.js';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [authed, setAuthed] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+  const [authReady] = useState(true);
   const [dataReady, setDataReady] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [contracts, setContracts] = useState([]);
@@ -44,8 +47,37 @@ export function AppProvider({ children }) {
     refreshWorkspace();
   }, [refreshWorkspace]);
 
-  const signIn = useCallback(() => setAuthed(true), []);
-  const signOut = useCallback(() => setAuthed(false), []);
+  const signIn = useCallback(
+    async (credentials) => {
+      const { user } = await authRepository.signIn(credentials);
+      setAuthUser(user || null);
+      setAuthed(Boolean(user));
+      await refreshWorkspace();
+      return user;
+    },
+    [refreshWorkspace]
+  );
+
+  const signUp = useCallback(
+    async (payload) => {
+      const { user } = await authRepository.signUp(payload);
+      setAuthUser(user || null);
+      setAuthed(Boolean(user));
+      await refreshWorkspace();
+      return user;
+    },
+    [refreshWorkspace]
+  );
+
+  const signOut = useCallback(
+    async () => {
+      await authRepository.signOut();
+      setAuthUser(null);
+      setAuthed(false);
+      await refreshWorkspace();
+    },
+    [refreshWorkspace]
+  );
 
   const addContract = useCallback(
     async (payload) => {
@@ -148,7 +180,10 @@ export function AppProvider({ children }) {
   const value = useMemo(
     () => ({
       authed,
+      authUser,
+      authReady,
       signIn,
+      signUp,
       signOut,
       dataReady,
       loadError,
@@ -168,7 +203,10 @@ export function AppProvider({ children }) {
     }),
     [
       authed,
+      authUser,
+      authReady,
       signIn,
+      signUp,
       signOut,
       dataReady,
       loadError,

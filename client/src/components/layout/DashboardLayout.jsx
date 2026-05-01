@@ -44,8 +44,8 @@ export default function DashboardLayout() {
             <span className="topnav-subtitle">Contract intelligence for existing API traffic</span>
           </div>
           <div className="topnav-user">
-            <span className="badge badge-muted" title="User menu (prototype)">
-              {userLabel} ▾
+            <span className="badge badge-muted" title="Signed-in user">
+              {userLabel}
             </span>{' '}
             <button type="button" className="link" onClick={signOut}>
               Sign out
